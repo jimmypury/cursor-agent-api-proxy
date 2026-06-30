@@ -13,6 +13,7 @@ import {
   createChatResponse,
 } from "../adapter/cli-to-openai.js";
 import type { OpenAIChatRequest } from "../types/openai.js";
+import { getProxyAuthMode } from "./auth.js";
 
 const KNOWN_MODELS = [
   "auto",
@@ -54,6 +55,22 @@ function extractApiKey(req: Request): string | undefined {
   return undefined;
 }
 
+/**
+ * Resolve the Cursor API key to forward to the agent CLI.
+ *
+ * - disabled: keep existing behavior (client Bearer may carry a Cursor key).
+ * - shared:   Bearer is the proxy key; Cursor credentials come from the server env.
+ * - bring-your-own-key: client Bearer is the user's own Cursor key.
+ */
+function resolveCursorApiKey(req: Request): string | undefined {
+  const mode = getProxyAuthMode();
+
+  if (mode === "shared") {
+    return process.env.CURSOR_API_KEY || undefined;
+  }
+  return extractApiKey(req);
+}
+
 export async function handleChatCompletions(
   req: Request,
   res: Response
@@ -79,7 +96,7 @@ export async function handleChatCompletions(
     }
 
     const { prompt, model } = openaiToCli(body);
-    const apiKey = extractApiKey(req);
+    const apiKey = resolveCursorApiKey(req);
     console.error(
       `[chat] id=${requestId} model=${body.model} -> cli_model=${model} stream=${stream}`
     );

@@ -123,6 +123,44 @@ Full list: `curl http://localhost:4646/v1/models` or `agent --list-models`.
 |--------------|---------|-------------|
 | `PORT` | `4646` | Listen port (or `cursor-agent-api start 8080`) |
 | `CURSOR_API_KEY` | - | Alternative to `agent login` |
+| `PROXY_API_KEY` | - | When set, enables proxy auth (shared mode). Comma-separated for multiple keys |
+| `PROXY_AUTH_MODE` | `shared` if `PROXY_API_KEY` set, else disabled | `shared` or `bring-your-own-key` |
+
+### Proxy auth
+
+By default the proxy is open (local use, unchanged behavior). Configure one of
+two modes to gate access to `/v1/*`:
+
+**Shared** — share your Cursor subscription. Clients use a proxy key you issue;
+Cursor credentials come from the server.
+
+```bash
+export PROXY_API_KEY=sk-your-proxy-key
+# PROXY_AUTH_MODE defaults to "shared" when PROXY_API_KEY is set
+```
+
+```bash
+curl -X POST http://localhost:4646/v1/chat/completions \
+  -H "Authorization: Bearer sk-your-proxy-key" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"auto","messages":[{"role":"user","content":"Hello!"}]}'
+```
+
+**Bring-your-own-key** — each client uses their own Cursor API key; the proxy
+only requires a real Bearer token is present.
+
+```bash
+export PROXY_AUTH_MODE=bring-your-own-key
+```
+
+```bash
+curl -X POST http://localhost:4646/v1/chat/completions \
+  -H "Authorization: Bearer your-cursor-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"auto","messages":[{"role":"user","content":"Hello!"}]}'
+```
+
+`/health` is never authenticated (used by Docker healthcheck / load balancers).
 
 ## Auto-start (boot)
 

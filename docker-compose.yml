@@ -11,6 +11,8 @@ services:
       PORT: ${PORT:-4646}
       CURSOR_API_KEY: ${CURSOR_API_KEY:?Set CURSOR_API_KEY in .env (see .env.example)}
       CURSOR_DEBUG: ${CURSOR_DEBUG:-}
+      PROXY_API_KEY: ${PROXY_API_KEY:-}
+      PROXY_AUTH_MODE: ${PROXY_AUTH_MODE:-}
     restart: unless-stopped
     healthcheck:
       test:

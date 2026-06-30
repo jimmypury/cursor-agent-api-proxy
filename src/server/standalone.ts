@@ -17,6 +17,7 @@ import { startServer, stopServer } from "./index.js";
 import { setCachedCliVersion } from "./routes.js";
 import { verifyCursorCli } from "../subprocess/manager.js";
 import { installService, uninstallService } from "../service/install.js";
+import { initProxyAuth, loadProxyApiKeys } from "./auth.js";
 import {
   daemonStart,
   daemonStop,
@@ -75,6 +76,25 @@ async function runForeground(port: number): Promise<void> {
   }
 
   try {
+    let mode;
+    try {
+      mode = initProxyAuth();
+    } catch (err) {
+      console.error(
+        `Proxy auth config error: ${err instanceof Error ? err.message : err}`
+      );
+      process.exit(1);
+    }
+
+    if (mode === "shared") {
+      const n = loadProxyApiKeys().length;
+      console.log(`  Proxy auth: enabled (mode: shared, ${n} key(s))`);
+    } else if (mode === "bring-your-own-key") {
+      console.log("  Proxy auth: enabled (mode: bring-your-own-key)");
+    } else {
+      console.log("  Proxy auth: disabled (open /v1 endpoints)");
+    }
+
     await startServer({ port });
     registerForegroundPid();
     const base = `http://localhost:${port}`;

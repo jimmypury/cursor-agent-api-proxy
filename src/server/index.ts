@@ -9,6 +9,7 @@ import {
   handleModels,
   handleHealth,
 } from "./routes.js";
+import { proxyAuthMiddleware } from "./auth.js";
 
 let server: Server | null = null;
 
@@ -42,6 +43,9 @@ export async function startServer(
   });
 
   app.get("/health", handleHealth);
+
+  // Optional proxy auth for OpenAI-compatible endpoints only.
+  app.use("/v1", proxyAuthMiddleware);
   app.get("/v1/models", handleModels);
   app.post("/v1/chat/completions", handleChatCompletions);
 
