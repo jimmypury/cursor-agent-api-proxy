@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:20-bookworm-slim AS builder
+FROM node:20-trixie-slim AS builder
 
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
@@ -13,19 +13,20 @@ COPY tsconfig.json ./
 COPY src ./src
 RUN pnpm run build && pnpm prune --prod --ignore-scripts
 
-# slim 仍是 glibc，满足 cursor CLI 对 glibc 的要求；体积约 240MB vs 完整版 ~900MB
-FROM node:20-bookworm-slim AS runner
+# slim 仍是 glibc，满足 cursor CLI 对 glibc 的要求；基于 Debian 13 (Trixie)
+FROM node:20-trixie-slim AS runner
 
 RUN groupadd --gid 1001 nodejs \
   && useradd --uid 1001 --gid nodejs --create-home --shell /bin/bash nodejs
 
-USER nodejs
-
-# 临时安装 curl/ca-certificates 用于拉取 cursor CLI，装完立即清理，不留 apt 缓存
+# apt-get 需要 root；curl 仅用于拉取 cursor CLI
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates curl \
-  && curl -fsS --retry 5 --retry-delay 10 --retry-all-errors https://cursor.com/install | bash \
   && rm -rf /var/lib/apt/lists/*
+
+USER nodejs
+
+RUN curl -fsS --retry 5 --retry-delay 10 --retry-all-errors https://cursor.com/install | bash
 
 ENV NODE_ENV=production PATH="/home/nodejs/.local/bin:${PATH}"
 
