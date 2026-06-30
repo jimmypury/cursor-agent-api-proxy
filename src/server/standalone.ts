@@ -18,6 +18,7 @@ import { setCachedCliVersion } from "./routes.js";
 import { verifyCursorCli } from "../subprocess/manager.js";
 import { installService, uninstallService } from "../service/install.js";
 import { initProxyAuth, loadProxyApiKeys } from "./auth.js";
+import { warmModels } from "../subprocess/models.js";
 import {
   daemonStart,
   daemonStop,
@@ -93,6 +94,11 @@ async function runForeground(port: number): Promise<void> {
       console.log("  Proxy auth: enabled (mode: bring-your-own-key)");
     } else {
       console.log("  Proxy auth: disabled (open /v1 endpoints)");
+    }
+
+    // Pre-warm model cache only in shared mode (lazy otherwise).
+    if (mode === "shared") {
+      await warmModels(mode, process.env.CURSOR_API_KEY);
     }
 
     await startServer({ port });

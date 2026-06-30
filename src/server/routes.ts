@@ -14,35 +14,7 @@ import {
 } from "../adapter/cli-to-openai.js";
 import type { OpenAIChatRequest } from "../types/openai.js";
 import { getProxyAuthMode } from "./auth.js";
-
-const KNOWN_MODELS = [
-  "auto",
-  "composer-1.5",
-  "composer-1",
-  "opus-4.6-thinking",
-  "opus-4.6",
-  "opus-4.5-thinking",
-  "opus-4.5",
-  "sonnet-4.5-thinking",
-  "sonnet-4.5",
-  "gpt-5.3-codex",
-  "gpt-5.3-codex-fast",
-  "gpt-5.3-codex-low",
-  "gpt-5.3-codex-low-fast",
-  "gpt-5.3-codex-high",
-  "gpt-5.3-codex-high-fast",
-  "gpt-5.3-codex-xhigh",
-  "gpt-5.3-codex-xhigh-fast",
-  "gpt-5.3-codex-spark-preview",
-  "gpt-5.2",
-  "gpt-5.2-codex",
-  "gpt-5.2-codex-low",
-  "gpt-5.2-codex-low-fast",
-  "gpt-5.1-codex-max",
-  "gemini-3-pro",
-  "gemini-3-flash",
-  "grok",
-];
+import { getModels } from "../subprocess/models.js";
 
 function extractApiKey(req: Request): string | undefined {
   const auth = req.headers.authorization;
@@ -276,18 +248,33 @@ async function handleNonStreamingResponse(
   });
 }
 
-export function handleModels(_req: Request, res: Response): void {
-  const now = Math.floor(Date.now() / 1000);
+export async function handleModels(req: Request, res: Response): Promise<void> {
+  try {
+    const mode = getProxyAuthMode();
+    const apiKey = resolveCursorApiKey(req);
+    const ids = await getModels(mode, apiKey);
+    const now = Math.floor(Date.now() / 1000);
 
-  res.json({
-    object: "list",
-    data: KNOWN_MODELS.map((id) => ({
-      id,
-      object: "model" as const,
-      owned_by: "cursor",
-      created: now,
-    })),
-  });
+    res.json({
+      object: "list",
+      data: ids.map((id) => ({
+        id,
+        object: "model" as const,
+        owned_by: "cursor",
+        created: now,
+      })),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to list models";
+    console.error("[models] Error:", message);
+    res.status(502).json({
+      error: {
+        message,
+        type: "upstream_error",
+        code: "cursor_cli_error",
+      },
+    });
+  }
 }
 
 let cachedCliVersion: string | undefined;
