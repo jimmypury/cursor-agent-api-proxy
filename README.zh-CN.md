@@ -123,6 +123,43 @@ gemini-3-pro          # Gemini 3 Pro
 |---------|--------|------|
 | `PORT` | `4646` | 监听端口（或 `cursor-agent-api start 8080`） |
 | `CURSOR_API_KEY` | - | `agent login` 的替代方案 |
+| `PROXY_API_KEY` | - | 设置后启用代理鉴权（shared 模式）；逗号分隔可配置多个 key |
+| `PROXY_AUTH_MODE` | 设置 `PROXY_API_KEY` 时默认 `shared`，否则关闭 | `shared` 或 `bring-your-own-key` |
+
+### 代理鉴权
+
+默认不开启代理鉴权（本地自用，行为不变）。配置以下任一模式来限制 `/v1/*` 访问：
+
+**共享模式（shared）**——分享你的 Cursor 订阅。客户端使用你下发的代理 key；
+Cursor 凭证由服务端提供。
+
+```bash
+export PROXY_API_KEY=sk-your-proxy-key
+# 设置 PROXY_API_KEY 时 PROXY_AUTH_MODE 默认为 "shared"
+```
+
+```bash
+curl -X POST http://localhost:4646/v1/chat/completions \
+  -H "Authorization: Bearer sk-your-proxy-key" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"auto","messages":[{"role":"user","content":"Hello!"}]}'
+```
+
+**自带 Cursor Key 模式（bring-your-own-key）**——每个客户端用自己的 Cursor
+API Key；代理只要求请求里带有真实 Bearer token。
+
+```bash
+export PROXY_AUTH_MODE=bring-your-own-key
+```
+
+```bash
+curl -X POST http://localhost:4646/v1/chat/completions \
+  -H "Authorization: Bearer your-cursor-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"auto","messages":[{"role":"user","content":"Hello!"}]}'
+```
+
+`/health` 始终不鉴权（供 Docker 健康检查 / 负载均衡探活使用）。
 
 ## 开机自启
 
