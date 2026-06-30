@@ -5,42 +5,6 @@
 
 import type { OpenAIChatMessage, OpenAIChatRequest, OpenAIContentPart } from "../types/openai.js";
 
-const KNOWN_CURSOR_MODELS = new Set([
-  "auto",
-  "composer-1.5",
-  "composer-1",
-  "gpt-5.3-codex",
-  "gpt-5.3-codex-low",
-  "gpt-5.3-codex-high",
-  "gpt-5.3-codex-xhigh",
-  "gpt-5.3-codex-fast",
-  "gpt-5.3-codex-low-fast",
-  "gpt-5.3-codex-high-fast",
-  "gpt-5.3-codex-xhigh-fast",
-  "gpt-5.2",
-  "gpt-5.2-codex",
-  "gpt-5.2-codex-high",
-  "gpt-5.2-codex-low",
-  "gpt-5.2-codex-xhigh",
-  "gpt-5.2-codex-fast",
-  "gpt-5.2-codex-high-fast",
-  "gpt-5.2-codex-low-fast",
-  "gpt-5.2-codex-xhigh-fast",
-  "gpt-5.1-codex-max",
-  "gpt-5.1-codex-max-high",
-  "opus-4.6-thinking",
-  "sonnet-4.5-thinking",
-  "gpt-5.2-high",
-  "opus-4.6",
-  "opus-4.5",
-  "opus-4.5-thinking",
-  "sonnet-4.5",
-  "gpt-5.1-high",
-  "gemini-3-pro",
-  "gemini-3-flash",
-  "grok",
-]);
-
 export interface CliInput {
   prompt: string;
   model: string;
@@ -54,25 +18,24 @@ export interface CliInput {
  *   "cursor-opus-4.6"     -> "opus-4.6"
  *   "auto"                -> "auto"
  *   "opus-4.6-thinking"   -> "opus-4.6-thinking"
+ *
+ * Unknown model names are passed through to the CLI as-is so newly added
+ * Cursor models work without a code change; the CLI validates the name.
  */
 export function extractModel(model: string): string {
-  if (model.startsWith("cursor/")) {
-    return model.slice("cursor/".length) || "auto";
+  const trimmed = model.trim();
+  if (!trimmed) return "auto";
+
+  if (trimmed.startsWith("cursor/")) {
+    return trimmed.slice("cursor/".length) || "auto";
   }
 
-  if (model.startsWith("cursor-")) {
-    const remainder = model.slice("cursor-".length);
-    if (remainder && KNOWN_CURSOR_MODELS.has(remainder)) {
-      return remainder;
-    }
+  if (trimmed.startsWith("cursor-")) {
+    const remainder = trimmed.slice("cursor-".length);
     if (remainder) return remainder;
   }
 
-  if (KNOWN_CURSOR_MODELS.has(model)) {
-    return model;
-  }
-
-  return "auto";
+  return trimmed;
 }
 
 function messageContentToText(content: string | OpenAIContentPart[]): string {
